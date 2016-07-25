@@ -3,6 +3,7 @@ from django.conf import settings
 from django.utils.safestring import mark_safe
 
 from ..utils import get_loader
+from ..exceptions import WebpackLoaderBadStatsError
 
 register = template.Library()
 
@@ -37,7 +38,17 @@ def _get_bundle(bundle_name, extension, config):
 
 @register.simple_tag
 def render_bundle(bundle_name, extension=None, config='DEFAULT', attrs=''):
-    return render_as_tags(_get_bundle(bundle_name, extension, config), attrs)
+    '''
+    If there's a problem with the Webpack stats file serve a fallback css file
+    This is to prevent 500 errors on deployment
+    '''
+    try:
+        result = render_as_tags(
+            _get_bundle(bundle_name, extension, config), attrs)
+        return result
+    except WebpackLoaderBadStatsError:
+        url = 'https://dr2d0q0030ozz.cloudfront.net/main-41f2dc17fac5aad4a382.css'
+        return '<link type="text/css" href="{}" rel="stylesheet" />'.format(url)
 
 
 @register.simple_tag
